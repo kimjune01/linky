@@ -1,0 +1,14 @@
+{
+    "mcpServers": {
+      "holster": {
+        "command": "uv",
+        "args": [
+          "--directory",
+          "/Users/junekim/Documents/boiler",
+          "run",
+          "server.py"
+        ]
+      }
+    }
+  }
+  
