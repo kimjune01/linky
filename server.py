@@ -21,8 +21,8 @@ async def wait_for_file(file_path: str, min_lines: int, max_wait: int) -> str:
     """Wait for a file to exist and have at least min_lines, up to max_wait seconds."""
     waited = 0
     while waited < max_wait:
-        await asyncio.sleep(2)
-        waited += 2
+        await asyncio.sleep(1)
+        waited += 1
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 result = f.read()
@@ -169,6 +169,67 @@ async def list_linkedin_search_queries(page: int = 1, page_size: int = 10) -> li
     start = (page - 1) * page_size
     end = start + page_size
     return queries[start:end]
+
+
+async def wait_for_profile_file(handle: str) -> tuple[str, str]:
+    """
+    Wait for the LinkedIn profile file for a given handle to appear and be complete.
+    Returns a tuple of (handle, result or error message).
+    """
+    file_path = os.path.expanduser(f"~/Desktop/temp/{handle}.md")
+    max_wait = 10
+    waited = 0
+    while waited < max_wait:
+        await asyncio.sleep(1)
+        waited += 1
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                result = f.read()
+                if len(result.strip().splitlines()) < 20:
+                    continue
+                return handle, result
+    return (
+        handle,
+        f"Error: File {file_path} not found or not complete after {max_wait} seconds.",
+    )
+
+
+@mcp.tool()
+async def scrape_multiple_linkedin_profiles(handles: list[str]) -> dict:
+    """
+    Scrape multiple LinkedIn profiles by opening each in a new browser window and waiting for the corresponding files concurrently.
+
+    For each handle in the list, this tool checks if the file already exists and is complete. If not, it opens the LinkedIn profile page in a new browser window and waits for a file to appear in ~/Desktop/temp/{handle}.md, which is expected to be created by a browser addon. It returns a dictionary mapping each handle to the file content or an error message if the file is not found or incomplete after 10 seconds.
+
+    Args:
+        handles (list[str]): A list of LinkedIn handles (usernames) to scrape.
+
+    Returns:
+        dict: A dictionary mapping each handle to its file content or an error message.
+
+    Caveats:
+        - Relies on a browser addon to create the files in the expected location.
+        - Each file must contain at least 20 lines to be considered complete.
+        - The tool will open a new browser window for each handle only if the file is missing or incomplete.
+        - All file waits are performed concurrently for efficiency.
+    """
+    results: dict[str, str] = {}
+    to_open = []
+    for handle in handles:
+        file_path = os.path.expanduser(f"~/Desktop/temp/{handle}.md")
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                result = f.read()
+                if len(result.strip().splitlines()) >= 20:
+                    results[handle] = result
+                    continue
+        to_open.append(handle)
+        url = f"https://www.linkedin.com/in/{handle}"
+        webbrowser.open_new(url)
+    tasks = [wait_for_profile_file(handle) for handle in to_open]
+    results_list = await asyncio.gather(*tasks)
+    results.update({handle: result for handle, result in results_list})
+    return results
 
 
 if __name__ == "__main__":
