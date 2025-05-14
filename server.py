@@ -29,9 +29,7 @@ async def wait_for_file(file_path: str, min_lines: int, max_wait: int) -> str:
                 if len(result.strip().splitlines()) < min_lines:
                     continue
                 return result
-    return (
-        f"File not found or incomplete after {max_wait} seconds. file_path: {file_path}"
-    )
+    return f"File not found or incomplete after {max_wait} seconds. file_path: {file_path}. Consider broadening your search query, as it may have returned no results."
 
 
 @mcp.tool()
@@ -68,6 +66,8 @@ async def scrape_linkedin_profile(handle: str) -> str:
 async def search_linkedin_people(query: str, page: int = 1) -> str:
     """
     Open a new browser window for a LinkedIn people search with the given query and page number.
+
+    Suggestion: For broader results, you can query many pages sequentially by incrementing the 'page' parameter.
 
     This tool URL-encodes the provided search query, checks if a corresponding .txt file exists in the ~/Desktop/temp directory (using the pattern: <encoded_query>_page<page>.txt), and returns its content if it contains at least 2 lines. If not, it opens a new browser window with the LinkedIn people search URL and waits for the file to be created and populated by a browser addon.
 
